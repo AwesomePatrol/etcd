@@ -22,6 +22,8 @@ import (
 	"math/rand"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -61,6 +63,8 @@ type Trace struct {
 	steps        []step
 	stepDisabled bool
 	isEmpty      bool
+
+	span trace.Span
 }
 
 type step struct {
@@ -73,6 +77,26 @@ type step struct {
 
 func New(op string, lg *zap.Logger, fields ...Field) *Trace {
 	return &Trace{operation: op, lg: lg, startTime: time.Now(), fields: fields}
+}
+
+func NewWithCtx(ctx context.Context, op string, lg *zap.Logger, fields ...Field) *Trace {
+	t := New(op, lg, fields...)
+	t.span = trace.SpanFromContext(ctx)
+	t.updateOTEL(op, fields...)
+	return t
+}
+
+func (t *Trace) updateOTEL(op string, fields ...Field) {
+	if t.span == nil {
+		return
+	}
+	attrs := make([]attribute.KeyValue, 0, len(fields))
+	for _, field := range fields {
+		if s, ok := field.Value.(string); ok {
+			attrs = append(attrs, attribute.String(field.Key, s))
+		}
+	}
+	t.span.AddEvent(op, trace.WithAttributes(attrs...))
 }
 
 // TODO returns a non-nil, empty Trace
@@ -96,6 +120,7 @@ func (t *Trace) SetStartTime(time time.Time) {
 }
 
 func (t *Trace) InsertStep(at int, time time.Time, msg string, fields ...Field) {
+	t.updateOTEL(msg, fields...)
 	newStep := step{time: time, msg: msg, fields: fields}
 	if at < len(t.steps) {
 		t.steps = append(t.steps[:at+1], t.steps[at:]...)
@@ -119,6 +144,7 @@ func (t *Trace) StopSubTrace(fields ...Field) {
 
 // Step adds step to trace
 func (t *Trace) Step(msg string, fields ...Field) {
+	t.updateOTEL(msg, fields...)
 	if !t.stepDisabled {
 		t.steps = append(t.steps, step{time: time.Now(), msg: msg, fields: fields})
 	}
@@ -133,6 +159,7 @@ func (t *Trace) StepWithFunction(f func(), msg string, fields ...Field) {
 }
 
 func (t *Trace) AddField(fields ...Field) {
+	t.updateOTEL("add_field", fields...)
 	for _, f := range fields {
 		if !t.updateFieldIfExist(f) {
 			t.fields = append(t.fields, f)

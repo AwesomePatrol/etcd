@@ -97,10 +97,12 @@ type Authenticator interface {
 }
 
 func (s *EtcdServer) Range(ctx context.Context, r *pb.RangeRequest) (*pb.RangeResponse, error) {
-	trace := traceutil.New("range",
+	trace := traceutil.NewWithCtx(ctx, "range",
 		s.Logger(),
 		traceutil.Field{Key: "range_begin", Value: string(r.Key)},
 		traceutil.Field{Key: "range_end", Value: string(r.RangeEnd)},
+		traceutil.Field{Key: "limit", Value: strconv.Itoa(int(r.Limit))},
+		traceutil.Field{Key: "count_only", Value: strconv.FormatBool(r.CountOnly)},
 	)
 	ctx = context.WithValue(ctx, traceutil.TraceKey, trace)
 
@@ -154,12 +156,14 @@ func (s *EtcdServer) DeleteRange(ctx context.Context, r *pb.DeleteRangeRequest) 
 }
 
 func (s *EtcdServer) Txn(ctx context.Context, r *pb.TxnRequest) (*pb.TxnResponse, error) {
-	if isTxnReadonly(r) {
-		trace := traceutil.New("transaction",
-			s.Logger(),
-			traceutil.Field{Key: "read_only", Value: true},
-		)
-		ctx = context.WithValue(ctx, traceutil.TraceKey, trace)
+	ro := isTxnReadonly(r)
+	trace := traceutil.NewWithCtx(ctx, "transaction",
+		s.Logger(),
+		traceutil.Field{Key: "read_only", Value: strconv.FormatBool(ro)},
+		traceutil.Field{Key: "compare_key", Value: string(r.GetCompare()[0].GetKey())},
+	)
+	ctx = context.WithValue(ctx, traceutil.TraceKey, trace)
+	if ro {
 		if !isTxnSerializable(r) {
 			err := s.linearizableReadNotify(ctx)
 			trace.Step("agreement among raft nodes before linearized reading")
@@ -224,7 +228,10 @@ func isTxnReadonly(r *pb.TxnRequest) bool {
 func (s *EtcdServer) Compact(ctx context.Context, r *pb.CompactionRequest) (*pb.CompactionResponse, error) {
 	startTime := time.Now()
 	result, err := s.processInternalRaftRequestOnce(ctx, pb.InternalRaftRequest{Compaction: r})
-	trace := traceutil.TODO()
+	trace := traceutil.NewWithCtx(ctx, "compact",
+		s.Logger(),
+		traceutil.Field{Key: "rev", Value: strconv.Itoa(int(r.Revision))},
+	)
 	if result != nil && result.trace != nil {
 		trace = result.trace
 		defer func() {
