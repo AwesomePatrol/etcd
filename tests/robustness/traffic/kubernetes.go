@@ -87,7 +87,7 @@ func (t kubernetesTraffic) RunTrafficLoop(ctx context.Context, c *client.Recordi
 				return nil
 			default:
 			}
-			rev, err := t.Read(ctx, kc, s, limiter, keyPrefix, readLimit)
+			rev, err := t.List(ctx, kc, s, limiter, keyPrefix, readLimit)
 			if err != nil {
 				continue
 			}
@@ -106,7 +106,7 @@ func (t kubernetesTraffic) RunTrafficLoop(ctx context.Context, c *client.Recordi
 			}
 			// Avoid multiple failed writes in a row
 			if lastWriteFailed {
-				_, err := t.Read(ctx, kc, s, limiter, keyPrefix, 0)
+				_, err := t.List(ctx, kc, s, limiter, keyPrefix, 0)
 				if err != nil {
 					continue
 				}
@@ -121,7 +121,7 @@ func (t kubernetesTraffic) RunTrafficLoop(ctx context.Context, c *client.Recordi
 	g.Wait()
 }
 
-func (t kubernetesTraffic) Read(ctx context.Context, kc kubernetes.Interface, s *storage, limiter *rate.Limiter, keyPrefix string, limit int) (rev int64, err error) {
+func (t kubernetesTraffic) List(ctx context.Context, kc kubernetes.Interface, s *storage, limiter *rate.Limiter, keyPrefix string, limit int) (rev int64, err error) {
 	hasMore := true
 	var kvs []*mvccpb.KeyValue
 	var revision int64
