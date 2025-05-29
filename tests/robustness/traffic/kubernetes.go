@@ -92,6 +92,7 @@ func (t kubernetesTraffic) RunTrafficLoop(ctx context.Context, c *client.Recordi
 				continue
 			}
 			t.Watch(ctx, c, s, limiter, keyPrefix, rev+1)
+			t.Get(ctx, kc, s, limiter, rev+1)
 		}
 	})
 	g.Go(func() error {
@@ -213,6 +214,17 @@ func (t kubernetesTraffic) Watch(ctx context.Context, c *client.RecordingClient,
 	for e := range c.Watch(watchCtx, keyPrefix, revision, true, true, true) {
 		s.Update(e)
 	}
+	limiter.Wait(ctx)
+}
+
+func (t kubernetesTraffic) Get(ctx context.Context, kc kubernetes.Interface, s *storage, limiter *rate.Limiter, revision int64) {
+	key, rev := s.PickRandom()
+	if rand.Intn(2) == 0 {
+		// Issue half reads without revision specified.
+		rev = 0
+	}
+	kc.Get(ctx, key, kubernetes.GetOptions{Revision: rev})
+
 	limiter.Wait(ctx)
 }
 
