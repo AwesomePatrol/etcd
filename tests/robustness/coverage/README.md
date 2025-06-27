@@ -24,7 +24,20 @@ traces from a running cluster. They will output information on:
 At first we will manually set up the cluster, run e2e tests, download traces and
 then execute the test.
 
-1\. Setup KiND cluster with tracing exporting to Jaeger
+0\. The commands below are expected to be run in a `kubernetes` repository
+patched with
+https://github.com/AwesomePatrol/kubernetes/commit/5a18a66c06bad4350fb1fd52b3ca50ab885dbbf1
+or
+https://github.com/AwesomePatrol/kubernetes/tree/add-kubernetes-etcd-contract-tracker
+
+```
+git clone https://github.com/AwesomePatrol/kubernetes -b add-kubernetes-etcd-contract-tracker --depth 1
+cd kubernetes
+```
+
+1\. Setup [KIND
+cluster](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) with
+tracing exporting to [Jaeger](https://www.jaegertracing.io/)
 
 ```
 mkdir -p apiserver-conf
@@ -70,7 +83,7 @@ nodes:
 EOF
 export KUBECONFIG="$(pwd)/kind-with-tracing-config"
 kind build node-image
-kind create cluster --config kind-config.yaml --image kindest/node:latest
+kind create cluster --config kind-with-tracing.yaml --image kindest/node:latest
 kubectl run jaeger --overrides='{ "apiVersion": "v1", "spec": { "hostNetwork": true, "nodeName": "kind-control-plane", "tolerations": [{"effect": "NoExecute", "operator": "Exists"}]} }' --labels='tier=control-plane' --image jaegertracing/jaeger:2.6.0
 ```
 
