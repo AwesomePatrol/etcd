@@ -40,7 +40,7 @@ tools:
 
 # Tests
 
-GO_TEST_FLAGS?=
+GO_TEST_FLAGS?=-v
 
 .PHONY: test
 test:

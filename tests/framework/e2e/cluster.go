@@ -187,6 +187,10 @@ func DefaultConfig() *EtcdProcessClusterConfig {
 		ServerConfig:       *embed.NewConfig(),
 	}
 	cfg.ServerConfig.InitialClusterToken = "new"
+	cfg.ServerConfig.EnableDistributedTracing = true
+	cfg.ServerConfig.DistributedTracingServiceName = "etcd"
+	cfg.ServerConfig.DistributedTracingAddress = "0.0.0.0:4317"
+	cfg.ServerConfig.DistributedTracingSamplingRatePerMillion = 1_000_000
 	return cfg
 }
 
@@ -584,6 +588,14 @@ func (cfg *EtcdProcessClusterConfig) EtcdServerProcessConfig(tb testing.TB, i in
 	}
 	if !cfg.ServerConfig.StrictReconfigCheck {
 		args = append(args, "--strict-reconfig-check=false")
+	}
+	if cfg.ServerConfig.EnableDistributedTracing {
+		args = append(args,
+			"--enable-distributed-tracing",
+			fmt.Sprintf("--distributed-tracing-address=%s", cfg.ServerConfig.DistributedTracingAddress),
+			fmt.Sprintf("--distributed-tracing-service-name=%s", cfg.ServerConfig.DistributedTracingServiceName),
+			fmt.Sprintf("--distributed-tracing-sampling-rate=%d", cfg.ServerConfig.DistributedTracingSamplingRatePerMillion),
+		)
 	}
 
 	var murl string
