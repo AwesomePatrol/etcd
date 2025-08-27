@@ -123,6 +123,34 @@ func (t kubernetesTraffic) RunTrafficLoop(ctx context.Context, c *client.Recordi
 			}
 		}
 	})
+	g.Go(func() error {
+		var watchRevision, compactRevision int64
+		var offset int64 = -1
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-finish:
+				return nil
+			default:
+			}
+			var err error
+			compactRevision, watchRevision, err = t.waitForCompaction(ctx, c, limiter, watchRevision)
+			if err != nil {
+				continue
+			}
+			if compactRevision == 0 {
+				continue
+			}
+
+			_, err = t.ListAll(ctx, kc, s, limiter, keyPrefix, t.averageKeyCount, compactRevision+offset)
+			// sequence: -1 -> 0 -> 1 -> -1 -> ...
+			offset = (offset+2)%3 - 1
+			if err != nil {
+				continue
+			}
+		}
+	})
 	g.Wait()
 }
 
@@ -234,6 +262,27 @@ func (t kubernetesTraffic) Watch(ctx context.Context, c *client.RecordingClient,
 		s.Update(e)
 	}
 	limiter.Wait(ctx)
+}
+
+func (t kubernetesTraffic) waitForCompaction(ctx context.Context, c *client.RecordingClient, limiter *rate.Limiter, watchRevision int64) (int64, int64, error) {
+	watchCtx, cancel := context.WithTimeout(ctx, WatchTimeout)
+	defer cancel()
+
+	watchCtx = clientv3.WithRequireLeader(watchCtx)
+	for e := range c.Watch(watchCtx, compactRevKey, watchRevision, false, true, true) {
+		watchRevision = e.Header.Revision
+		if !e.IsProgressNotify() {
+			for _, e := range e.Events {
+				compactRevision, err := strconv.ParseInt(string(e.Kv.Value), 10, 64)
+				if err != nil {
+					return 0, watchRevision, fmt.Errorf("compact_rev_key is not an integer: %w", err)
+				}
+				return compactRevision, watchRevision, nil
+			}
+		}
+	}
+	limiter.Wait(ctx)
+	return 0, watchRevision, nil
 }
 
 func (t kubernetesTraffic) generateKey() string {
