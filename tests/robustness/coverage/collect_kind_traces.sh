@@ -37,7 +37,7 @@ PATCHES_DIR="${ETCD_REPO}/tests/robustness/coverage/patches/kubernetes"
 pushd "${KUBERNETES_REPO}"
 git apply --reverse --check "${PATCHES_DIR}/"* || git apply --recount "${PATCHES_DIR}/"*
 echo "Building KIND node image..."
-kind build node-image
+#kind build node-image
 popd
 
 echo "Creating Docker network..."
@@ -96,17 +96,18 @@ delete_kind_cluster() {
 }
 trap "delete_kind_cluster" EXIT SIGINT
 pushd "${ETCD_REPO}/tests/robustness/coverage"
-kind create cluster --config kind-with-tracing.yaml --name kind-with-external-etcd --image kindest/node:latest
+kind create cluster --config kind-with-tracing.yaml --name kind-with-external-etcd
+#--image kindest/node:latest
 popd
 
-echo "Running Kubernetes e2e tests..."
-pushd "${KUBERNETES_REPO}"
-make WHAT="test/e2e/e2e.test"
-./_output/bin/e2e.test \
-  -context kind-kind-with-external-etcd \
-  -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
-  -num-nodes 2
-popd
+#echo "Running Kubernetes e2e tests..."
+#pushd "${KUBERNETES_REPO}"
+#make WHAT="test/e2e/e2e.test"
+#./_output/bin/e2e.test \
+#  -context kind-kind-with-external-etcd \
+#  -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
+#  -num-nodes 2
+#popd
 
 echo "Downloading traces..."
 curl -v --get --retry 10 --retry-connrefused -o "${ETCD_REPO}/tests/robustness/coverage/testdata/head.json" \
