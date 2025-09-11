@@ -110,6 +110,7 @@ if [[ -n "${TERM}" ]]; then
 else
   # No need to wrap when running in CI
   make test-cmd
+fi
 popd
 
 echo "Downloading traces..."
