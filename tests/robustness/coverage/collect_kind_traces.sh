@@ -105,7 +105,11 @@ make WHAT="test/e2e/e2e.test"
   -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
   -num-nodes 2
 echo "Running Kubernetes cmd tests..."
-#./build/run.sh make test-cmd
+if [[ -n "${TERM}" ]]; then
+  ./build/run.sh make test-cmd
+else
+  # No need to wrap when running in CI
+  make test-cmd
 popd
 
 echo "Downloading traces..."
