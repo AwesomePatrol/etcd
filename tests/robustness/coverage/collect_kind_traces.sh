@@ -106,11 +106,8 @@ make WHAT="test/e2e/e2e.test"
   -context kind-kind-with-external-etcd \
   -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
   -num-nodes 2
-if [[ -n "${TERM}" ]]; then
-  # Skip in CI for now
-  echo "Running Kubernetes cmd tests..."
-  ./build/run.sh make test-cmd
-fi
+echo "Running Kubernetes cmd tests..."
+./build/run.sh env TERM="${TERM:-dumb}" make test-cmd
 popd
 
 echo "Downloading traces..."
