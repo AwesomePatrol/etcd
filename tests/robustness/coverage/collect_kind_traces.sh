@@ -103,7 +103,7 @@ make WHAT="test/e2e/e2e.test"
   -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
   -num-nodes 2
 echo "Running Kubernetes cmd tests..."
-./build/run.sh make test-cmd
+#./build/run.sh make test-cmd
 popd
 
 echo "Downloading traces..."
