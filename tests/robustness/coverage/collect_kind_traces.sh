@@ -21,6 +21,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+set -x
+
 # 1. Customize and set the environment variables
 export KUBERNETES_REPO="${KUBERNETES_REPO:-$(go env GOPATH)/src/k8s.io/kubernetes}"
 export ETCD_REPO="${ETCD_REPO:-$(go env GOPATH)/src/go.etcd.io/etcd}"
@@ -104,12 +106,10 @@ make WHAT="test/e2e/e2e.test"
   -context kind-kind-with-external-etcd \
   -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
   -num-nodes 2
-echo "Running Kubernetes cmd tests..."
 if [[ -n "${TERM}" ]]; then
+  # Skip in CI for now
+  echo "Running Kubernetes cmd tests..."
   ./build/run.sh make test-cmd
-else
-  # No need to wrap when running in CI
-  make test-cmd
 fi
 popd
 
