@@ -100,14 +100,14 @@ pushd "${KUBERNETES_REPO}"
 make WHAT="test/e2e/e2e.test"
 ./_output/bin/e2e.test \
   -context kind-kind-with-external-etcd \
-  -ginkgo.focus="\[sig-apps\].*Conformance" \
+  -ginkgo.focus="\[sig-apps\].*StatefulSet.*Conformance" \
   -num-nodes 2
 echo "Running Kubernetes cmd tests..."
 ./build/run.sh make test-cmd
 popd
 
 echo "Downloading traces..."
-curl -v --get --retry 10 --retry-connrefused -o "${ETCD_REPO}/tests/robustness/coverage/testdata/traces-$(date -I).json" \
+curl -v --get --retry 10 --retry-connrefused -o "${ETCD_REPO}/tests/robustness/coverage/testdata/head.json" \
   -H "Content-Type: application/json" \
   --data-urlencode "query.start_time_min=$(date --date="5 days ago" -Ins)" \
   --data-urlencode "query.start_time_max=$(date --date="2 minutes ago" -Ins)" \
